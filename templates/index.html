@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLP Demo - Prepoznavanje Rukopisnih Znakova</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1a1f35 0%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-title { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+  .header-sub { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+  .status-badge {
+    padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #f78166; }
+  .status-dot.ready { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+  .status-dot.training { background: #f0b04a; animation: pulse 1s infinite; }
+
+  /* Main layout */
+  .main { max-width: 1200px; margin: 0 auto; padding: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .main { grid-template-columns: 1fr; } }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .card-title {
+    font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text2); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::before { content: ""; width: 3px; height: 16px; background: var(--accent); border-radius: 2px; display: block; }
+
+  /* Canvas area */
+  .canvas-container {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .canvas-wrap {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    transition: border-color 0.2s;
+    cursor: crosshair;
+  }
+  .canvas-wrap:hover { border-color: var(--accent); }
+  #drawCanvas {
+    display: block;
+    background: #000;
+    touch-action: none;
+  }
+  .canvas-hint {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #333; font-size: 0.9rem; pointer-events: none; text-align: center; line-height: 1.6;
+    transition: opacity 0.3s;
+  }
+  .canvas-buttons { display: flex; gap: 12px; width: 100%; }
+  .btn {
+    flex: 1; padding: 12px 20px; border: none; border-radius: 8px;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--accent); color: #000;
+  }
+  .btn-primary:hover { background: #79b8ff; transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger {
+    background: transparent; color: var(--accent3); border: 1px solid var(--accent3);
+  }
+  .btn-danger:hover { background: var(--accent3); color: #fff; }
+
+  /* Brush size */
+  .brush-control { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text2); width: 100%; }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+
+  /* Prediction result */
+  .prediction-main {
+    text-align: center;
+    padding: 24px;
+    background: var(--surface2);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    min-height: 120px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .pred-label { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .pred-character {
+    font-size: 5rem; font-weight: 900; line-height: 1;
+    background: linear-gradient(135deg, var(--accent), #9f7aea);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    transition: all 0.3s;
+  }
+  .pred-confidence { font-size: 1.1rem; color: var(--accent2); font-weight: 600; margin-top: 6px; }
+  .pred-empty { color: var(--text2); font-size: 0.9rem; }
+
+  /* Top 5 bars */
+  .top5-list { display: flex; flex-direction: column; gap: 8px; }
+  .top5-item { display: flex; align-items: center; gap: 10px; }
+  .top5-char {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+  }
+  .top5-char.top1 { background: var(--accent); color: #000; border-color: var(--accent); }
+  .bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 24px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+  .bar-fill {
+    height: 100%; border-radius: 4px; transition: width 0.5s ease;
+    background: linear-gradient(90deg, var(--accent) 0%, #9f7aea 100%);
+    min-width: 0;
+  }
+  .bar-fill.top1 { background: linear-gradient(90deg, var(--accent2) 0%, #58a6ff 100%); }
+  .bar-pct {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    font-size: 0.78rem; font-weight: 600; color: var(--text);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  /* Model info */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .info-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; text-align: center;
+  }
+  .info-value { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+  .info-label { font-size: 0.72rem; color: var(--text2); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Architecture visualization */
+  .arch-viz { display: flex; align-items: center; gap: 4px; overflow-x: auto; padding: 16px 0; }
+  .layer-box {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 60px;
+  }
+  .layer-circles { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+  .neuron {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--accent);
+    opacity: 0.6; transition: opacity 0.3s;
+  }
+  .neuron.active { opacity: 1; box-shadow: 0 0 6px var(--accent); }
+  .layer-label { font-size: 0.65rem; color: var(--text2); text-align: center; white-space: nowrap; }
+  .layer-size { font-size: 0.7rem; font-weight: 700; color: var(--accent); }
+  .arch-arrow { color: var(--text2); font-size: 1.2rem; }
+
+  /* Training section */
+  .train-section { grid-column: 1 / -1; }
+  .train-progress { margin-top: 16px; }
+  .progress-bar-wrap { background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .progress-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%); transition: width 0.3s; }
+  .train-log {
+    margin-top: 12px; background: #000; border-radius: 8px; padding: 12px;
+    font-family: 'Courier New', monospace; font-size: 0.78rem; color: #0f9960;
+    height: 150px; overflow-y: auto; border: 1px solid var(--border);
+  }
+  .train-stats { display: flex; gap: 20px; margin-top: 12px; font-size: 0.85rem; color: var(--text2); }
+  .train-stat-val { color: var(--text); font-weight: 600; }
+
+  /* All classes grid */
+  .all-classes { display: none; margin-top: 20px; }
+  .all-classes.visible { display: block; }
+  .classes-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .class-chip {
+    padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 600;
+    background: var(--surface2); border: 1px solid var(--border); transition: all 0.3s;
+    position: relative; cursor: default;
+  }
+  .class-chip.highlighted { border-color: var(--accent); color: var(--accent); background: rgba(88, 166, 255, 0.1); }
+  .class-chip .chip-prob {
+    position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+    font-size: 0.65rem; color: var(--accent2); white-space: nowrap; opacity: 0;
+    pointer-events: none; transition: opacity 0.2s;
+  }
+
+  /* Animations */
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.4s ease; }
+  .loading-spinner {
+    width: 24px; height: 24px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 20px;
+    font-size: 0.85rem; color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    animation: fadeIn 0.3s ease;
+    z-index: 1000;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">🧠 Višeslojni Perceptron — Demo</div>
+    <div class="header-sub">Prepoznavanje rukopisnih cifara i slova</div>
+  </div>
+  <div class="status-badge">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Provjera...</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- LEFT: Canvas -->
+  <div>
+    <div class="card">
+      <div class="card-title">Sketchpad — Nacrtaj znak</div>
+      <div class="canvas-container">
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="drawCanvas" width="280" height="280"></canvas>
+          <div class="canvas-hint" id="canvasHint">Nacrtaj broj<br>ili slovo ovdje</div>
+        </div>
+        <div class="brush-control">
+          <span>✏️ Debljina:</span>
+          <input type="range" id="brushSize" min="8" max="30" value="18">
+          <span id="brushVal">18px</span>
+        </div>
+        <div class="canvas-buttons">
+          <button class="btn btn-primary" id="predictBtn">🔍 Prepoznaj</button>
+          <button class="btn btn-secondary" id="autoBtn">⚡ Auto</button>
+          <button class="btn btn-danger" id="clearBtn">🗑️ Obriši</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model Info -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Informacije o modelu</div>
+      <div class="info-grid" id="infoGrid">
+        <div class="info-item">
+          <div class="info-value" id="infoAcc">—</div>
+          <div class="info-label">Tačnost (test)</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value" id="infoErr">—</div>
+          <div class="info-label">Stopa greške</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value" id="infoClasses">—</div>
+          <div class="info-label">Broj klasa</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value" id="infoLayers">—</div>
+          <div class="info-label">Skriveni slojevi</div>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <div style="font-size:0.75rem;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Arhitektura mreže</div>
+        <div class="arch-viz" id="archViz"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Results -->
+  <div>
+    <div class="card">
+      <div class="card-title">Rezultat prepoznavanja</div>
+
+      <div class="prediction-main" id="predMain">
+        <div class="pred-empty">Nacrtaj znak i pritisni "Prepoznaj"</div>
+      </div>
+
+      <div id="top5Section" style="display:none">
+        <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Top 5 kandidata</div>
+        <div class="top5-list" id="top5List"></div>
+      </div>
+
+      <div class="all-classes" id="allClassesDiv">
+        <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;">Sve klase</div>
+        <div class="classes-grid" id="classesGrid"></div>
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:10px;">
+        <button class="btn btn-secondary" id="showAllBtn" onclick="toggleAllClasses()" style="font-size:0.82rem;flex:0">Prikaži sve klase</button>
+      </div>
+    </div>
+
+    <!-- Train card -->
+    <div class="card" style="margin-top:16px" id="trainCard">
+      <div class="card-title">Treniranje modela</div>
+      <div id="trainContent">
+        <p style="color:var(--text2);font-size:0.85rem;margin-bottom:14px;">Model se trenira na MNIST skupu podataka (60,000 uzoraka). Ovo može potrajati nekoliko minuta.</p>
+        <button class="btn btn-primary" id="trainBtn" onclick="startTraining()" style="width:100%">🚀 Pokreni treniranje</button>
+        <div class="train-progress" id="trainProgress" style="display:none">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.8rem">
+            <span style="color:var(--text2)">Progres</span>
+            <span id="epochInfo" style="color:var(--accent)">0 / 0 epoha</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="progressBar" style="width:0%"></div>
+          </div>
+          <div class="train-stats">
+            <span>Tačnost: <span class="train-stat-val" id="trainAccStat">—</span></span>
+            <span>Val. tačnost: <span class="train-stat-val" id="valAccStat">—</span></span>
+            <span>Gubitak: <span class="train-stat-val" id="lossStat">—</span></span>
+          </div>
+          <div class="train-log" id="trainLog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// Canvas logic
+// ============================================================
+const canvas = document.getElementById('drawCanvas');
+const ctx = canvas.getContext('2d');
+let isDrawing = false;
+let hasDrawn = false;
+let autoPredict = false;
+let autoTimer = null;
+let lastX = 0, lastY = 0;
+
+ctx.fillStyle = '#000';
+ctx.fillRect(0, 0, 280, 280);
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+ctx.strokeStyle = '#fff';
+
+const brushSlider = document.getElementById('brushSize');
+const brushVal = document.getElementById('brushVal');
+brushSlider.addEventListener('input', () => {
+  brushVal.textContent = brushSlider.value + 'px';
+});
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  if (e.touches) {
+    return {
+      x: (e.touches[0].clientX - rect.left) * scaleX,
+      y: (e.touches[0].clientY - rect.top) * scaleY
+    };
+  }
+  return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+}
+
+function startDraw(e) {
+  e.preventDefault();
+  isDrawing = true;
+  const pos = getPos(e);
+  lastX = pos.x; lastY = pos.y;
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, brushSlider.value / 2, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+}
+
+function draw(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  const pos = getPos(e);
+  ctx.lineWidth = parseInt(brushSlider.value);
+  ctx.strokeStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+  lastX = pos.x; lastY = pos.y;
+  hasDrawn = true;
+  document.getElementById('canvasHint').style.opacity = '0';
+}
+
+function stopDraw(e) {
+  if (!isDrawing) return;
+  isDrawing = false;
+  if (autoPredict && hasDrawn) {
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(predict, 600);
+  }
+}
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDraw);
+canvas.addEventListener('mouseleave', stopDraw);
+canvas.addEventListener('touchstart', startDraw, {passive: false});
+canvas.addEventListener('touchmove', draw, {passive: false});
+canvas.addEventListener('touchend', stopDraw);
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, 280, 280);
+  hasDrawn = false;
+  document.getElementById('canvasHint').style.opacity = '1';
+  document.getElementById('predMain').innerHTML = '<div class="pred-empty">Nacrtaj znak i pritisni "Prepoznaj"</div>';
+  document.getElementById('top5Section').style.display = 'none';
+  updateClassChips(null);
+});
+
+document.getElementById('predictBtn').addEventListener('click', predict);
+
+document.getElementById('autoBtn').addEventListener('click', function() {
+  autoPredict = !autoPredict;
+  this.textContent = autoPredict ? '⚡ Auto ON' : '⚡ Auto';
+  this.style.borderColor = autoPredict ? 'var(--accent2)' : '';
+  this.style.color = autoPredict ? 'var(--accent2)' : '';
+});
+
+// ============================================================
+// Prediction
+// ============================================================
+async function predict() {
+  const imgData = canvas.toDataURL('image/png');
+  const btn = document.getElementById('predictBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ ...';
+
+  try {
+    const res = await fetch('/api/predict', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({image: imgData})
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      showToast('⚠️ ' + data.error);
+      return;
+    }
+
+    // Main prediction
+    const mainEl = document.getElementById('predMain');
+    mainEl.innerHTML = `
+      <div class="pred-label">Prepoznato kao</div>
+      <div class="pred-character fade-in">${data.prediction}</div>
+      <div class="pred-confidence">Pouzdanost: ${data.confidence.toFixed(1)}%</div>
+    `;
+
+    // Top 5
+    const top5El = document.getElementById('top5List');
+    top5El.innerHTML = '';
+    data.top5.forEach((item, i) => {
+      const el = document.createElement('div');
+      el.className = 'top5-item';
+      el.innerHTML = `
+        <div class="top5-char ${i === 0 ? 'top1' : ''}">${item.class}</div>
+        <div class="bar-wrap">
+          <div class="bar-fill ${i === 0 ? 'top1' : ''}" style="width:${item.probability}%"></div>
+          <span class="bar-pct">${item.probability.toFixed(1)}%</span>
+        </div>
+      `;
+      top5El.appendChild(el);
+    });
+    document.getElementById('top5Section').style.display = 'block';
+
+    // Update class chips
+    updateClassChips(data.all_probabilities);
+
+  } catch(e) {
+    showToast('Greška: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 Prepoznaj';
+  }
+}
+
+function updateClassChips(probs) {
+  const grid = document.getElementById('classesGrid');
+  if (!probs) {
+    grid.querySelectorAll('.class-chip').forEach(c => {
+      c.classList.remove('highlighted');
+    });
+    return;
+  }
+  const map = {};
+  probs.forEach(p => { map[p.class] = p.probability; });
+  grid.querySelectorAll('.class-chip').forEach(chip => {
+    const cls = chip.dataset.cls;
+    const prob = map[cls] || 0;
+    chip.classList.toggle('highlighted', prob > 5);
+    chip.title = prob.toFixed(2) + '%';
+  });
+}
+
+function toggleAllClasses() {
+  const div = document.getElementById('allClassesDiv');
+  const btn = document.getElementById('showAllBtn');
+  div.classList.toggle('visible');
+  btn.textContent = div.classList.contains('visible') ? 'Sakrij klase' : 'Prikaži sve klase';
+}
+
+// ============================================================
+// Status & model info
+// ============================================================
+async function checkStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+
+    if (data.status === 'ready') {
+      dot.className = 'status-dot ready';
+      txt.textContent = 'Model spreman';
+      updateModelInfo(data);
+      updateArchViz(data.layer_sizes);
+      buildClassChips(data.classes);
+      document.getElementById('trainCard').style.display = 'none';
+    } else if (data.status === 'training') {
+      dot.className = 'status-dot training';
+      txt.textContent = 'Treniranje...';
+      startPollingProgress();
+    } else {
+      dot.className = 'status-dot';
+      txt.textContent = 'Model nije ucitan';
+    }
+  } catch(e) {}
+}
+
+function updateModelInfo(data) {
+  document.getElementById('infoAcc').textContent = (data.test_accuracy * 100).toFixed(2) + '%';
+  document.getElementById('infoErr').textContent = (data.error_rate * 100).toFixed(2) + '%';
+  document.getElementById('infoClasses').textContent = data.n_classes;
+  document.getElementById('infoLayers').textContent = (data.layer_sizes.length - 2);
+}
+
+function updateArchViz(layerSizes) {
+  const viz = document.getElementById('archViz');
+  viz.innerHTML = '';
+  const names = ['Ulaz', 'Sk.1', 'Sk.2', 'Sk.3', 'Izlaz'];
+  const colors = ['#58a6ff', '#9f7aea', '#f78166', '#f0b04a', '#3fb950'];
+  layerSizes.forEach((size, i) => {
+    if (i > 0) {
+      const arrow = document.createElement('div');
+      arrow.className = 'arch-arrow';
+      arrow.textContent = '→';
+      viz.appendChild(arrow);
+    }
+    const box = document.createElement('div');
+    box.className = 'layer-box';
+    const circles = document.createElement('div');
+    circles.className = 'layer-circles';
+    const shown = Math.min(size, 6);
+    for (let j = 0; j < shown; j++) {
+      const n = document.createElement('div');
+      n.className = 'neuron';
+      n.style.background = colors[i] || '#58a6ff';
+      circles.appendChild(n);
+    }
+    if (size > shown) {
+      const dots = document.createElement('div');
+      dots.style.cssText = 'color:var(--text2);font-size:0.7rem;text-align:center';
+      dots.textContent = '...';
+      circles.appendChild(dots);
+    }
+    const label = document.createElement('div');
+    label.className = 'layer-label';
+    label.textContent = names[i] || 'L' + i;
+    const sizeEl = document.createElement('div');
+    sizeEl.className = 'layer-size';
+    sizeEl.textContent = size;
+    box.appendChild(circles);
+    box.appendChild(label);
+    box.appendChild(sizeEl);
+    viz.appendChild(box);
+  });
+}
+
+function buildClassChips(classes) {
+  const grid = document.getElementById('classesGrid');
+  grid.innerHTML = '';
+  classes.forEach(cls => {
+    const chip = document.createElement('div');
+    chip.className = 'class-chip';
+    chip.textContent = cls;
+    chip.dataset.cls = cls;
+    grid.appendChild(chip);
+  });
+}
+
+// ============================================================
+// Training
+// ============================================================
+let pollingInterval = null;
+
+async function startTraining() {
+  const btn = document.getElementById('trainBtn');
+  btn.disabled = true;
+  btn.textContent = '🚀 Pokretanje...';
+
+  try {
+    const res = await fetch('/api/train', {method: 'POST'});
+    const data = await res.json();
+    showToast('✅ ' + data.message);
+    document.getElementById('trainProgress').style.display = 'block';
+    startPollingProgress();
+  } catch(e) {
+    showToast('Greška: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '🚀 Pokreni treniranje';
+  }
+}
+
+function startPollingProgress() {
+  if (pollingInterval) return;
+  document.getElementById('trainProgress').style.display = 'block';
+  pollingInterval = setInterval(pollProgress, 2000);
+}
+
+async function pollProgress() {
+  try {
+    const res = await fetch('/api/training_progress');
+    const data = await res.json();
+    const history = data.history || [];
+    const total = data.total_epochs || 60;
+
+    if (history.length > 0) {
+      const last = history[history.length - 1];
+      const pct = (last.epoch / total * 100).toFixed(0);
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('epochInfo').textContent = `${last.epoch} / ${total} epoha`;
+      document.getElementById('trainAccStat').textContent = last.train_acc ? (last.train_acc * 100).toFixed(2) + '%' : '—';
+      document.getElementById('valAccStat').textContent = last.val_acc ? (last.val_acc * 100).toFixed(2) + '%' : '—';
+      document.getElementById('lossStat').textContent = last.loss ? last.loss.toFixed(4) : '—';
+
+      const log = document.getElementById('trainLog');
+      const line = `> Ep ${String(last.epoch).padStart(2,' ')}/${total} | Loss=${last.loss ? last.loss.toFixed(4) : '?'} | Train=${last.train_acc ? (last.train_acc*100).toFixed(2) : '?'}%${last.val_acc ? ' | Val='+( last.val_acc*100).toFixed(2)+'%' : ''}\n`;
+      log.textContent += line;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    if (data.status === 'done') {
+      clearInterval(pollingInterval);
+      pollingInterval = null;
+      showToast('✅ Treniranje završeno! Tačnost: ' + (data.final_accuracy * 100).toFixed(2) + '%');
+      setTimeout(() => { location.reload(); }, 1500);
+    }
+  } catch(e) {}
+}
+
+// ============================================================
+// Toast notifications
+// ============================================================
+function showToast(msg, duration = 4000) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), duration);
+}
+
+// ============================================================
+// Init
+// ============================================================
+checkStatus();
+setInterval(checkStatus, 5000);
+</script>
+
+</body>
+</html>
