@@ -1,16 +1,44 @@
 {
+  "model_name": "MLP_Demo_1.0",
+  "description": "Vi\u0161eslojni Perceptron uskla\u0111en sa zavr\u0161nim radom",
+  "author": "Vladan Kenji\u0107",
   "layer_sizes": [
     784,
-    512,
-    256,
     128,
+    64,
     10
   ],
   "dropout_rates": [
-    0.3,
-    0.3,
+    0.2,
     0.2,
     0.0
+  ],
+  "total_parameters": 109386,
+  "parameter_details": [
+    {
+      "layer": 1,
+      "n_in": 784,
+      "n_out": 128,
+      "weights": 100352,
+      "biases": 128,
+      "total": 100480
+    },
+    {
+      "layer": 2,
+      "n_in": 128,
+      "n_out": 64,
+      "weights": 8192,
+      "biases": 64,
+      "total": 8256
+    },
+    {
+      "layer": 3,
+      "n_in": 64,
+      "n_out": 10,
+      "weights": 640,
+      "biases": 10,
+      "total": 650
+    }
   ],
   "n_classes": 10,
   "class_names": [
@@ -25,11 +53,17 @@
     "8",
     "9"
   ],
-  "train_accuracy": 1.0,
-  "test_accuracy": 0.9865,
-  "error_rate": 0.013499999999999956,
-  "epochs": 60,
-  "batch_size": 128,
+  "train_accuracy": 0.9997666666666667,
+  "test_accuracy": 0.9814,
+  "error_rate": 0.01859999999999995,
+  "test_errors_count": 186,
+  "epochs": 40,
+  "batch_size": 64,
   "learning_rate": 0.001,
-  "training_duration_seconds": 1976.867757320404
+  "learning_rate_decay": 0.97,
+  "optimizer": "Adam",
+  "beta1": 0.9,
+  "beta2": 0.999,
+  "epsilon": 1e-08,
+  "training_duration_seconds": 818.5725762844086
 }

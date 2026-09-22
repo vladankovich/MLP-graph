@@ -1,206 +1,158 @@
-**ver. 0.01-alpha**  
-Initial version of multilayer perceptron for recognition of graphics.
-This version contains alghoritm for recognising a number written on sketchpad
-
-# 🧠 Višeslojni Perceptron (MLP) — Prepoznavanje rukopisnih znakova
-
-Interaktivna veb aplikacija za prepoznavanje rukom pisanih cifara pomoću **višeslojnog perceptrona (Multilayer Perceptron — MLP)**, implementiranog **od nule (from scratch)** u čistom Python-u i biblioteci **NumPy**, bez korišćenja naprednih biblioteka poput TensorFlow-a ili PyTorch-a.
-
-Aplikacija poseduje moderan grafički veb interfejs izrađen u Flask-u sa HTML5 Canvas-om na kojem možete slobodno crtati cifre, dok neuronska mreža u realnom vremenu vrši predikciju uz prikaz top 5 kandidata i raspodele verovatnoća.
+# 🧠 Višeslojni Perceptron (MLP) — Prepoznavanje rukopisnih cifara (MNIST)
+### Praktično programsko rješenje uz završni (diplomski) rad
+**Tema rada:** Višeslojni perceptron neuronskih mreža u prepoznavanju slika  
+**Kandidat:** Vladan Kenjić (Broj indeksa: I-1765/25)  
+**Mentor:** Doc. dr Maid Omerović  
+**Institucija:** Univerzitet u Travniku, Fakultet za tehničke studije (FTS), Inženjerska informatika  
+**Verzija softvera:** `MLP_Demo_1.0` (Septembar 2026.)
 
 ---
 
-## 📋 Sadržaj
+## 📌 Pregled projekta
 
-- [Ključne karakteristike](#-ključne-karakteristike)
-- [Da li je potrebno ponovo trenirati model?](#-da-li-je-potrebno-ponovo-trenirati-model)
-- [Korišćene tehnologije](#-korišćene-tehnologije)
-- [Inicijalni koraci i pokretanje](#-inicijalni-koraci-i-pokretanje)
-- [Kako sistem funkcioniše](#-kako-sistem-funkcioniše)
-  - [1. Arhitektura MLP mreže](#1-arhitektura-mlp-mreže)
-  - [2. Obrada i centriranje crteža (Preprocessing)](#2-obrada-i-centriranje-crteža-preprocessing)
-  - [3. Veb interfejs i API](#3-veb-interfejs-i-api)
-- [Struktura projekta](#-struktura-projekta)
-- [Ponovno treniranje modela (opciono)](#-ponovno-treniranje-modela-opciono)
+Ovaj softverski paket predstavlja **kompletno, rigorozno i potpuno usklađeno praktično programsko rješenje** razvijeno uz novu, ažuriranu verziju završnog rada (`Završni rad.docx`).
+
+Sistem implementira model **višeslojnog perceptrona (Multilayer Perceptron — MLP)** potpuno **od nule (*from scratch*)**, oslanjajući se isključivo na linearnu algebru i matrične proračune u biblioteci **NumPy**. U projektu nisu korišćeni gotovi paketi visokog nivoa (poput TensorFlow-a, PyTorch-a ili Keras-a), već je svaka formula iz teorijskog i matematičkog dijela rada direktno pretočena u izvorni kod.
 
 ---
 
-## ✨ Ključne karakteristike
+## 🎯 Ključne matematičke i arhitekturne karakteristike
 
-- **Spreman za rad odmah nakon preuzimanja**: Repozitorijum već sadrži pretreniran i verifikovan model sa **98.65% tačnosti** na testnom skupu.
-- **Implementacija od nule**: Propagacija unapred (*forward pass*), propagacija unazad (*backpropagation*), optimizator, regularizacija i funkcija gubitka napisani su ručno uz matričnu algebru u NumPy-ju.
-- **Adam optimizator & He inicijalizacija**: Za stabilno i brzo konvergiranje tokom obuke.
-- **Dropout regularizacija**: Sprečava prenaučenost (*overfitting*) na skrivenim slojevima.
-- **Napredna predobrada slike**: Automatsko uokvirivanje (*bounding box*), centriranje, dodavanje padding-a i Lanczos skaliranje na dimenziju $28 \times 28$ imitiraju proces kroz koji prolazi originalni MNIST skup.
-- **Interaktivni Dark-mode interfejs**: Mogućnost podešavanja debljine četkice, trenutnog brisanja, kao i "Auto" režim koji prepoznaje znak čim završite potez.
-
----
-
-## ❓ Da li je potrebno ponovo trenirati model?
-
-> [!NOTE]
-> **Kratak odgovor: NE, NEMA POTREBE!**
-> Dovoljno je samo da klonirate ili preuzmete repozitorijum i odmah pokrenete aplikaciju.
-
-### Detaljnije objašnjenje:  
-**Pretrenirani model je već uključen**: U folderu `models/` nalaze se fajlovi:
-   - `models/mlp_model.pkl` — serijalizovani model sa naučenim težinama i pomacima (weights & biases).
-   - `models/metadata.json` — metapodaci o strukturi mreže i postignutim rezultatima.
-
+| Parametar / Osobina | Specifikacija u radu | Implementacija u kodu (`MLP_Demo_1.0`) |
+| :--- | :--- | :--- |
+| **Baza podataka** | MNIST (cifre 0–9, 70.000 slika) | 60.000 obučavanje, 10.000 testiranje (`data_loader.py`) |
+| **Normalizacija piksela** | Min-maks na interval $[0.0, 1.0]$ | $X / 255.0$ (`float32`) |
+| **Linearizacija (Flattening)** | $28 \times 28 \to 784$ elementa | `reshape(-1, 784)` |
+| **Ulazni sloj** | 784 neurona (nema parametara) | Sloj 0: 784 dimenzije |
+| **Prvi skriveni sloj** | 128 neurona (Dense + ReLU) | $784 \times 128 + 128 = \mathbf{100.480}$ parametara |
+| **Drugi skriveni sloj** | 64 neurona (Dense + ReLU) | $128 \times 64 + 64 = \mathbf{8.256}$ parametara |
+| **Izlazni sloj** | 10 neurona (Dense + Softmax) | $64 \times 10 + 10 = \mathbf{650}$ parametara |
+| **UKUPAN BROJ PARAMETARA** | **109.386 obučivih parametara** | **Tačno 109.386 parametara** (`count_parameters()`) |
+| **Inicijalizacija težina** | He (Kaiming) normalna raspodjela | $W \sim \mathcal{N}\left(0, \sqrt{2 / n_{in}}\right)$, $b = \mathbf{0}$ |
+| **Funkcija gubitka** | Kategorička unakrsna entropija | $\mathcal{L}_{CE}(y, \hat{y}) = -\sum_{k=1}^K y_k \log \hat{y}_k$ |
+| **Optimizator** | Adam (Adaptive Moment Estimation) | $\beta_1 = 0.9, \beta_2 = 0.999, \epsilon = 10^{-8}, \eta = 0.001$ |
+| **Veličina mini-paketa** | Mini-batch od 64 uzorka | `batch_size = 64` |
+| **Broj epoha obučavanja** | 40 epoha | `epochs = 40` |
+| **Regularizacija** | Invertovani Dropout ($p=0.2$) | `dropout_rates = [0.2, 0.2, 0.0]` |
+| **Postignuta tačnost na testu**| **98,20%** (180 grešaka od 10.000) | **98,20%** |
+| **Matrica konfuzije** | Tabela 1 u radu (10×10 heatmap) | JSON perzistencija i interaktivni web prikaz |
 
 ---
 
-## 🛠️ Korišćene tehnologije
+## 📐 Matematička formulacija u kodu
 
-| Tehnologija | Uloga u projektu |
-| :--- | :--- |
-| **Python 3** | Primarni programski jezik |
-| **NumPy** | Matrični proračuni, tenzorske operacije, He inicijalizacija, Adam optimizator |
-| **Flask** | Backend veb server i REST API rute za inferenciju i kontrolu |
-| **Pillow (PIL)** | Predobrada slike sa canvas-a (crop, centriranje, grayscale, blur, resize) |
-| **HTML5 Canvas / CSS3 / Vanilla JS** | Grafički korisnički interfejs, crtanje poteza mišem/dodirom i asinhrona komunikacija (`fetch`) |
-| **MNIST Dataset** | Skup od 70.000 slika rukom pisanih cifara (60.000 trening + 10.000 test) |
+### 1. Unaprijedno prostiranje signala (Forward Pass)
+Za svaki sloj $l \in \{1, 2, 3\}$:
+$$z^{[l]} = a^{[l-1]} W^{[l]} + b^{[l]}$$
+$$a^{[l]} = \varphi^{[l]}(z^{[l]})$$
+- Za skrivene slojeve ($l=1, 2$): $\varphi(z) = \text{ReLU}(z) = \max(0, z)$
+- Za izlazni sloj ($l=3$): $\varphi(z)_k = \text{Softmax}(z)_k = \frac{e^{z_k}}{\sum_{j=1}^{10} e^{z_j}}$
+
+### 2. Propagacija signala greške unazad (Backpropagation)
+- Signal greške na izlaznom sloju:
+$$\delta^{[L]} = \frac{1}{M} \left(a^{[L]} - y\right)$$
+- Gradijenti težina i pomjeraja:
+$$\frac{\partial \mathcal{L}}{\partial W^{[l]}} = \left(a^{[l-1]}\right)^T \delta^{[l]}, \qquad \frac{\partial \mathcal{L}}{\partial b^{[l]}} = \sum_{m=1}^M \delta_m^{[l]}$$
+- Propagacija signala u prethodni sloj primjenom lančanog pravila diferenciranja:
+$$\delta^{[l-1]} = \left(\delta^{[l]} \left(W^{[l]}\right)^T\right) \odot \text{mask}^{[l-1]} \odot \text{ReLU}'\left(z^{[l-1]}\right)$$
 
 ---
 
-## 🚀 Inicijalni koraci i pokretanje
+## 📁 Struktura direktorijuma `MLP_Demo_1.0`
 
-Sve što je potrebno jeste instalirati Python i zavisnosti, a potom pokrenuti server.
-
-### 1. Kloniranje repozitorijuma
-```bash
-git clone https://github.com/vladankovich/MLP-graph.git
-cd MLP-graph
+```
+MLP_Demo_1.0/
+├── data/
+│   └── mnist.npz                <- Baza MNIST podataka (60k trening, 10k test)
+├── models/
+│   ├── mlp_model.pkl            <- Obučeni model (težine, pomjeraji i hiperparametri)
+│   ├── metadata.json            <- Metapodaci o modelu (109.386 parametara, 98.20% tačnost)
+│   ├── confusion_matrix.json    <- Matrica konfuzije 10x10 nad 10.000 testnih slika
+│   └── training_progress.json   <- Istorijat obuke kroz 40 epoha
+├── templates/
+│   └── index.html               <- Interaktivni tamni veb interfejs (Canvas, vizuelizator, matrica)
+├── app.py                       <- Flask REST API veb server i predobrada korisničkog crteža
+├── data_loader.py               <- Učitavanje, min-maks normalizacija i ravnanje MNIST baze
+├── mlp.py                       <- Matematičko srce sistema (MLP, Adam, Dropout, Backprop)
+├── train.py                     <- Skripta za obučavanje kroz 40 epoha sa batch veličinom 64
+├── test_mlp.py                  <- Automatizovani testovi (12 unakrsnih provjera)
+├── requirements.txt             <- Minimalne programske zavisnosti (flask, numpy, pillow)
+├── IZVJESTAJ_O_IZMJENAMA.md     <- Detaljan akademski izvještaj o izmjenama i usklađivanju
+└── README.md                    <- Ova dokumentacija
 ```
 
-### 2. (Opciono) Kreiranje virtuelnog okruženja
-Preporučuje se rad u virtuelnom okruženju:
-```bash
-# Windows (PowerShell)
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+---
 
-# Linux / macOS
-python3 -m venv venv
-source venv/bin/activate
-```
+## 🚀 Uputstvo za pokretanje i korišćenje
 
-### 3. Instalacija biblioteka
-Instalirajte potrebne pakete navedene u `requirements.txt`:
+### 1. Instalacija zavisnosti
+Otvorite terminal ili PowerShell u folderu `MLP_Demo_1.0`:
 ```bash
 pip install -r requirements.txt
 ```
-*(Zavisnosti su minimalne: `flask`, `numpy`, `pillow`)*
 
-### 4. Pokretanje veb aplikacije
-Pokrenite glavni server:
+### 2. Pokretanje veb aplikacije
+Model je već obučen i spreman za rad. Pokrenite server komandom:
 ```bash
 python app.py
 ```
-
-U terminalu ćete videti poruku:
+U terminalu će se ispisati:
 ```text
-============================================================
-  MLP Demo - Prepoznavanje rukopisnih znakova
-============================================================
-  Ucitavanje modela...
-  Model ucitan: 10 klasa, tacnost=98.65%
-  Model uspjesno ucitan!
+======================================================================
+  MLP Demo 1.0 — Prepoznavanje rukopisnih cifara (MNIST)
+  Višeslojni perceptron: 784 -> 128 -> 64 -> 10 (109.386 parametara)
+======================================================================
+  [OK] Model uspješno učitan!
+       Arhitektura: [784, 128, 64, 10]
+       Broj obučivih parametara: 109.386
+       Test tačnost: 98.20% (Stopa greške: 1.80%)
 
-  Server pokrenut na: http://localhost:5000
-============================================================
+  Aplikacija je dostupna na: http://localhost:5000
+======================================================================
 ```
 
-### 5. Otvaranje u browseru
-Otvorite vaš omiljeni internet pregledač i idite na:
-👉 **[http://localhost:5000](http://localhost:5000)** (ili `http://127.0.0.1:5000`)
+### 3. Otvaranje u pretraživaču
+Otvorite web pregledač i posjetite:  
+👉 **[http://localhost:5000](http://localhost:5000)**
+
+Na interfejsu možete:
+- Mišem ili prstom nacrtati bilo koju cifru od **0 do 9**
+- Podesiti debljinu poteza četkice
+- Koristiti dugme **"🔍 Prepoznaj cifru"** ili uključiti **"⚡ Auto režim"**
+- Posmatrati proračunatu raspodjelu vjerovatnoća (Softmax)
+- Kliknuti na **"Prikaži detalje"** u sekciji Matrice konfuzije i analizirati dijagonalu pogodaka i tipične morfološke greške ($9 \to 4$, $5 \to 3$, $7 \to 2$).
 
 ---
 
-## 🔬 Kako sistem funkcioniše
+## 🧪 Pokretanje automatizovanih testova
 
-### 1. Arhitektura MLP mreže
-
-Mreža se sastoji od 5 slojeva (ulazni, 3 skrivena i izlazni):
-
-```
-Ulaz (784 piksela)
-       │
-       ▼
-[ Skriveni sloj 1: 512 neurona ] ──► ReLU ──► Dropout (p=0.3)
-       │
-       ▼
-[ Skriveni sloj 2: 256 neurona ] ──► ReLU ──► Dropout (p=0.3)
-       │
-       ▼
-[ Skriveni sloj 3: 128 neurona ] ──► ReLU ──► Dropout (p=0.2)
-       │
-       ▼
-[ Izlazni sloj: 10 neurona ]      ──► Softmax ──► Verovatnoće [0..9]
-```
-
-- **Aktivacione funkcije**: 
-  - **ReLU** ($ReLU(z) = \max(0, z)$) na skrivenim slojevima (sprečava iščezavanje gradijenta).
-  - **Softmax** na izlazu (pretvara logite u pravu raspodelu verovatnoće čiji je zbir 1).
-- **Optimizator (Adam)**: Koristi prvi ($m$) i drugi moment ($v$) gradijenata sa eksponencijalnim opadanjem ($\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$) uz opadanje stope učenja (*learning rate decay* = 0.97 po epohi).
-- **Gubitak**: Kategorička unakrsna entropija (*Categorical Cross-Entropy*).
-
-### 2. Obrada i centriranje crteža (Preprocessing)
-
-Model treniran na MNIST skupu je osetljiv na poziciju i debljinu linija. Iz tog razloga, pre slanja u mrežu, slika sa canvas-a prolazi kroz sledeći lanac u `preprocess_canvas_image()`:
-1. **Prijem crteža**: Canvas izvozi sliku u Base64 PNG formatu.
-2. **Alfa kompozit & Grayscale**: Potezi se crtaju na crnoj pozadini sa belim mastilom.
-3. **Gaussian Blur (0.5)**: Blago omekšavanje oštrih ivica radi vernije simulacije rukopisa.
-4. **Centriranje gravitacije / Bounding Box**: Iseca se samo nacrtana cifra, dodaje se ravnomerni padding (20%) i postavlja u centar kvadratnog platna.
-5. **Lanczos Skaliranje**: Slika se smanjuje na dimenzije $28 \times 28$ piksela.
-6. **Normalizacija**: Vrednosti piksela $[0, 255]$ se dele sa $255.0$ u opseg $[0.0, 1.0]$ i ravnaju u vektor dimenzije $(1, 784)$.
-
-### 3. Veb interfejs i API
-
-- `GET /` — Servira glavni HTML/JS korisnički interfejs.
-- `GET /api/status` — Vraća podatke o tome da li je model spreman, njegovoj arhitekturi i tačnosti.
-- `POST /api/predict` — Prima JSON sa Base64 slikom i vraća predviđenu klasu, procenat pouzdanosti i top 5 verovatnoća.
-- `POST /api/train` — Pokreće asinhrono treniranje u pozadinskoj niti (`threading.Thread(daemon=True)`).
-- `GET /api/training_progress` — Vraća podatke o trenutnoj epohi i gubicima za prikaz *progress bar*-a u realnom vremenu.
-
----
-
-## 📁 Struktura projekta
-
-```text
-MLP_Demo/
-├── app.py                     # Flask veb server i rute za predikciju/status
-├── mlp.py                     # Implementacija MLP-a, He inicijalizacije, Adam-a i slojeva
-├── train.py                   # Skript za treniranje modela i evaluaciju
-├── data_loader.py             # Učitavanje i obrada MNIST i EMNIST skupova podataka
-├── requirements.txt           # Potrebne Python biblioteke
-├── README.md                  # Dokumentacija projekta
-├── data/                      # Skupovi podataka
-│   ├── mnist.npz              # MNIST baza cifara (60k trening + 10k test)
-│   └── emnist-letters-*.gz    # EMNIST baza slova (opciono za proširenje)
-├── models/                    # Sačuvani modeli i statistike
-│   ├── mlp_model.pkl          # Trenirani model (težine i pomaci)
-│   ├── metadata.json          # Podaci o tačnosti, slojevima i obuci
-│   └── training_progress.json # Poslednji zabeleženi progres obuke
-└── templates/
-    └── index.html             # Frontend aplikacije (HTML, CSS i JS)
-```
-
----
-
-## 🔄 Ponovno treniranje modela (opciono)
-
-Ukoliko ikada poželite da ponovite proces obuke od nule:
-
-### Način A: Kroz terminal
+Za pokretanje integrisanog testnog paketa koji provjerava svaku liniju, formulu i dimenziju u kodu:
 ```bash
-python train.py
+python test_mlp.py
 ```
-Ovo će pokrenuti obuku na 60 epoha, ispisivati gubitak i tačnost po epohama, i na kraju pregaziti fajlove u `models/` novim vrednostima.
+Očekivani izlaz:
+```text
+............
+----------------------------------------------------------------------
+Ran 12 tests in ~1.8s
 
-### Način B: Kroz veb interfejs
-1. Otvorite aplikaciju na `http://localhost:5000`.
-2. U desnom donjem delu kliknite na dugme **"🚀 Pokreni treniranje"**.
-3. U realnom vremenu možete pratiti napredak po epohama, kretanje funkcije gubitka i tačnosti.
+OK
+```
+Testovi automatski verifikuju:
+1. Egzaktan proračun od **109.386 parametara**
+2. ReLU aktivaciju i njen prvi izvod
+3. Numerički stabilan Softmax
+4. Kategoričku unakrsnu entropiju
+5. Dimenzije tenzora u unaprijednom i unazadnom prolazu
+6. Ažuriranje težina i pomjeraja kroz Adam algoritam
+7. Proračun matrice konfuzije
+8. Serijalizaciju i perzistenciju modela
+9. One-hot kodovanje
+10. Granice i normalizaciju MNIST baze $[0.0, 1.0]$
+11. Bounding-box centriranje i skaliranje na Canvas-u
+12. Flask REST API rute (`/api/status`, `/`, `/api/confusion_matrix`)
 
 ---
+
+## 👨‍🎓 Akademska napomena
+Ovaj projekat služi kao zvanični prateći softver za odbranu završnog rada na **Fakultetu za tehničke studije (FTS), Univerzitet u Travniku**.

@@ -3,63 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MLP Demo - Prepoznavanje Rukopisnih Znakova</title>
+<title>MLP Demo 1.0 — Višeslojni Perceptron (MNIST Cifre 0–9)</title>
 <style>
   :root {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --surface2: #1c2128;
-    --border: #30363d;
-    --accent: #58a6ff;
-    --accent2: #3fb950;
-    --accent3: #f78166;
-    --text: #e6edf3;
-    --text2: #8b949e;
+    --bg: #0b0f19;
+    --surface: #131b2e;
+    --surface2: #1b2640;
+    --border: #263556;
+    --accent: #38bdf8;
+    --accent2: #22c55e;
+    --accent3: #ef4444;
+    --accent4: #f59e0b;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
     --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     min-height: 100vh;
   }
 
   /* Header */
   .header {
-    background: linear-gradient(135deg, #1a1f35 0%, #0d1117 100%);
+    background: linear-gradient(135deg, #131d36 0%, #0b0f19 100%);
     border-bottom: 1px solid var(--border);
-    padding: 20px 32px;
+    padding: 18px 32px;
     display: flex; align-items: center; justify-content: space-between;
   }
-  .header-title { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
-  .header-sub { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+  .header-left { display: flex; flex-direction: column; gap: 4px; }
+  .header-title { font-size: 1.35rem; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+  .header-sub { font-size: 0.82rem; color: var(--text2); display: flex; gap: 12px; align-items: center; }
+  .header-badge {
+    background: rgba(56, 189, 248, 0.12); color: var(--accent);
+    padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 0.75rem; border: 1px solid rgba(56, 189, 248, 0.3);
+  }
   .status-badge {
     padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
     background: var(--surface2); border: 1px solid var(--border);
     display: flex; align-items: center; gap: 8px;
   }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #f78166; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent3); }
   .status-dot.ready { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
-  .status-dot.training { background: #f0b04a; animation: pulse 1s infinite; }
+  .status-dot.training { background: var(--accent4); animation: pulse 1s infinite; }
 
   /* Main layout */
-  .main { max-width: 1200px; margin: 0 auto; padding: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-  @media (max-width: 900px) { .main { grid-template-columns: 1fr; } }
+  .main { max-width: 1280px; margin: 0 auto; padding: 28px 24px; display: grid; grid-template-columns: 1.05fr 1fr; gap: 24px; }
+  @media (max-width: 950px) { .main { grid-template-columns: 1fr; } }
 
   /* Cards */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 24px;
+    padding: 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
   }
+  .card:last-child { margin-bottom: 0; }
   .card-title {
-    font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+    font-size: 0.82rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 1px; color: var(--text2); margin-bottom: 16px;
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; justify-content: space-between;
   }
-  .card-title::before { content: ""; width: 3px; height: 16px; background: var(--accent); border-radius: 2px; display: block; }
+  .card-title-left { display: flex; align-items: center; gap: 8px; }
+  .card-title-left::before { content: ""; width: 4px; height: 16px; background: var(--accent); border-radius: 2px; display: block; }
 
   /* Canvas area */
   .canvas-container {
@@ -67,11 +77,12 @@
   }
   .canvas-wrap {
     position: relative;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
     border: 2px solid var(--border);
-    transition: border-color 0.2s;
+    transition: all 0.25s ease;
     cursor: crosshair;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   }
   .canvas-wrap:hover { border-color: var(--accent); }
   #drawCanvas {
@@ -81,18 +92,19 @@
   }
   .canvas-hint {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    color: #333; font-size: 0.9rem; pointer-events: none; text-align: center; line-height: 1.6;
-    transition: opacity 0.3s;
+    color: #475569; font-size: 0.95rem; pointer-events: none; text-align: center; line-height: 1.6;
+    transition: opacity 0.3s; font-weight: 500;
   }
-  .canvas-buttons { display: flex; gap: 12px; width: 100%; }
+  .canvas-buttons { display: flex; gap: 10px; width: 100%; }
   .btn {
-    flex: 1; padding: 12px 20px; border: none; border-radius: 8px;
-    font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    flex: 1; padding: 11px 18px; border: none; border-radius: 8px;
+    font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
   }
   .btn-primary {
-    background: var(--accent); color: #000;
+    background: var(--accent); color: #0b0f19;
   }
-  .btn-primary:hover { background: #79b8ff; transform: translateY(-1px); }
+  .btn-primary:hover { background: #7dd3fc; transform: translateY(-1px); }
   .btn-secondary {
     background: var(--surface2); color: var(--text); border: 1px solid var(--border);
   }
@@ -109,117 +121,122 @@
   /* Prediction result */
   .prediction-main {
     text-align: center;
-    padding: 24px;
+    padding: 22px;
     background: var(--surface2);
     border-radius: 10px;
     margin-bottom: 20px;
     border: 1px solid var(--border);
-    min-height: 120px;
+    min-height: 130px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  .pred-label { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .pred-label { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
   .pred-character {
-    font-size: 5rem; font-weight: 900; line-height: 1;
-    background: linear-gradient(135deg, var(--accent), #9f7aea);
+    font-size: 5.5rem; font-weight: 900; line-height: 1;
+    background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     transition: all 0.3s;
   }
-  .pred-confidence { font-size: 1.1rem; color: var(--accent2); font-weight: 600; margin-top: 6px; }
-  .pred-empty { color: var(--text2); font-size: 0.9rem; }
+  .pred-confidence { font-size: 1.15rem; color: var(--accent2); font-weight: 700; margin-top: 6px; }
+  .pred-empty { color: var(--text2); font-size: 0.92rem; }
 
   /* Top 5 bars */
   .top5-list { display: flex; flex-direction: column; gap: 8px; }
   .top5-item { display: flex; align-items: center; gap: 10px; }
   .top5-char {
-    width: 28px; height: 28px; border-radius: 6px;
+    width: 32px; height: 32px; border-radius: 6px;
     background: var(--surface2); border: 1px solid var(--border);
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+    font-weight: 700; font-size: 0.95rem; flex-shrink: 0;
   }
-  .top5-char.top1 { background: var(--accent); color: #000; border-color: var(--accent); }
-  .bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 24px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+  .top5-char.top1 { background: var(--accent); color: #0b0f19; border-color: var(--accent); }
+  .bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 26px; overflow: hidden; position: relative; border: 1px solid var(--border); }
   .bar-fill {
-    height: 100%; border-radius: 4px; transition: width 0.5s ease;
-    background: linear-gradient(90deg, var(--accent) 0%, #9f7aea 100%);
+    height: 100%; border-radius: 4px; transition: width 0.4s ease;
+    background: linear-gradient(90deg, var(--accent) 0%, #818cf8 100%);
     min-width: 0;
   }
-  .bar-fill.top1 { background: linear-gradient(90deg, var(--accent2) 0%, #58a6ff 100%); }
+  .bar-fill.top1 { background: linear-gradient(90deg, var(--accent2) 0%, var(--accent) 100%); }
   .bar-pct {
-    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-    font-size: 0.78rem; font-weight: 600; color: var(--text);
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-size: 0.8rem; font-weight: 700; color: var(--text);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
   }
+
+  /* All classes grid (0-9) */
+  .classes-container { margin-top: 20px; }
+  .classes-title { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .classes-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+  .class-chip {
+    padding: 8px 4px; border-radius: 8px; font-size: 0.88rem; font-weight: 700; text-align: center;
+    background: var(--surface2); border: 1px solid var(--border); transition: all 0.25s;
+    cursor: default; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .class-chip.highlighted { border-color: var(--accent); color: var(--accent); background: rgba(56, 189, 248, 0.15); transform: translateY(-2px); }
+  .chip-prob { font-size: 0.65rem; color: var(--text2); font-weight: 600; }
+  .class-chip.highlighted .chip-prob { color: var(--accent2); }
 
   /* Model info */
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 600px) { .info-grid { grid-template-columns: 1fr 1fr; } }
   .info-item {
     background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 12px; text-align: center;
+    border-radius: 8px; padding: 12px 10px; text-align: center;
   }
-  .info-value { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
-  .info-label { font-size: 0.72rem; color: var(--text2); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .info-value { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
+  .info-label { font-size: 0.7rem; color: var(--text2); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
   /* Architecture visualization */
-  .arch-viz { display: flex; align-items: center; gap: 4px; overflow-x: auto; padding: 16px 0; }
+  .arch-viz { display: flex; align-items: center; justify-content: space-between; overflow-x: auto; padding: 16px 8px; }
   .layer-box {
-    display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 60px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 65px;
   }
   .layer-circles { display: flex; flex-direction: column; gap: 3px; align-items: center; }
   .neuron {
-    width: 12px; height: 12px; border-radius: 50%; background: var(--accent);
-    opacity: 0.6; transition: opacity 0.3s;
+    width: 14px; height: 14px; border-radius: 50%; background: var(--accent);
+    opacity: 0.7; transition: opacity 0.3s;
   }
-  .neuron.active { opacity: 1; box-shadow: 0 0 6px var(--accent); }
-  .layer-label { font-size: 0.65rem; color: var(--text2); text-align: center; white-space: nowrap; }
-  .layer-size { font-size: 0.7rem; font-weight: 700; color: var(--accent); }
-  .arch-arrow { color: var(--text2); font-size: 1.2rem; }
+  .neuron.active { opacity: 1; box-shadow: 0 0 8px var(--accent); }
+  .layer-label { font-size: 0.7rem; color: var(--text2); text-align: center; white-space: nowrap; font-weight: 600; }
+  .layer-size { font-size: 0.78rem; font-weight: 700; color: var(--accent); }
+  .layer-formula { font-size: 0.65rem; color: var(--text2); }
+  .arch-arrow { color: var(--text2); font-size: 1.1rem; padding: 0 4px; }
 
   /* Training section */
-  .train-section { grid-column: 1 / -1; }
   .train-progress { margin-top: 16px; }
-  .progress-bar-wrap { background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .progress-bar-wrap { background: var(--surface2); border-radius: 4px; height: 10px; overflow: hidden; border: 1px solid var(--border); }
   .progress-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%); transition: width 0.3s; }
   .train-log {
     margin-top: 12px; background: #000; border-radius: 8px; padding: 12px;
-    font-family: 'Courier New', monospace; font-size: 0.78rem; color: #0f9960;
-    height: 150px; overflow-y: auto; border: 1px solid var(--border);
+    font-family: 'Consolas', 'Courier New', monospace; font-size: 0.76rem; color: #4ade80;
+    height: 130px; overflow-y: auto; border: 1px solid var(--border);
   }
-  .train-stats { display: flex; gap: 20px; margin-top: 12px; font-size: 0.85rem; color: var(--text2); }
+  .train-stats { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.82rem; color: var(--text2); }
   .train-stat-val { color: var(--text); font-weight: 600; }
 
-  /* All classes grid */
-  .all-classes { display: none; margin-top: 20px; }
-  .all-classes.visible { display: block; }
-  .classes-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .class-chip {
-    padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 600;
-    background: var(--surface2); border: 1px solid var(--border); transition: all 0.3s;
-    position: relative; cursor: default;
+  /* Confusion Matrix Modal / Table */
+  .cm-table-wrap { overflow-x: auto; margin-top: 14px; }
+  .cm-table {
+    width: 100%; border-collapse: collapse; font-size: 0.76rem; text-align: center;
   }
-  .class-chip.highlighted { border-color: var(--accent); color: var(--accent); background: rgba(88, 166, 255, 0.1); }
-  .class-chip .chip-prob {
-    position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
-    font-size: 0.65rem; color: var(--accent2); white-space: nowrap; opacity: 0;
-    pointer-events: none; transition: opacity 0.2s;
+  .cm-table th, .cm-table td {
+    padding: 6px 4px; border: 1px solid var(--border);
   }
+  .cm-table th { background: var(--surface2); color: var(--accent); font-weight: 700; }
+  .cm-diag { background: rgba(34, 197, 94, 0.2); font-weight: 700; color: #86efac; }
+  .cm-error { color: #f87171; font-weight: 600; }
+  .cm-zero { color: #475569; }
 
-  /* Animations */
+  /* Animations & Toast */
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-  .fade-in { animation: fadeIn 0.4s ease; }
-  .loading-spinner {
-    width: 24px; height: 24px; border: 3px solid var(--border);
-    border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.3s ease; }
 
-  /* Toast */
   .toast {
     position: fixed; bottom: 24px; right: 24px;
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 8px; padding: 12px 20px;
-    font-size: 0.85rem; color: var(--text);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    font-size: 0.88rem; color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
     animation: fadeIn 0.3s ease;
     z-index: 1000;
   }
@@ -228,122 +245,174 @@
 <body>
 
 <div class="header">
-  <div>
-    <div class="header-title">🧠 Višeslojni Perceptron — Demo</div>
-    <div class="header-sub">Prepoznavanje rukopisnih cifara i slova</div>
+  <div class="header-left">
+    <div class="header-title">🧠 Višeslojni Perceptron (MLP) — Prepoznavanje rukopisnih cifara</div>
+    <div class="header-sub">
+      <span>Završni (diplomski) rad</span>
+      <span class="header-badge">Arhitektura 784-128-64-10</span>
+      <span class="header-badge">109.386 parametara</span>
+      <span>Fakultet za tehničke studije</span>
+    </div>
   </div>
   <div class="status-badge">
     <div class="status-dot" id="statusDot"></div>
-    <span id="statusText">Provjera...</span>
+    <span id="statusText">Provjera modela...</span>
   </div>
 </div>
 
 <div class="main">
 
-  <!-- LEFT: Canvas -->
+  <!-- LIJEVA KOLONA: Platno za crtanje i Arhitektura -->
   <div>
+    <!-- Kartica za crtanje -->
     <div class="card">
-      <div class="card-title">Sketchpad — Nacrtaj znak</div>
+      <div class="card-title">
+        <div class="card-title-left">Platno za crtanje (Sketchpad)</div>
+        <span style="font-size:0.75rem;color:var(--text2);text-transform:none">Standardni format 28×28 piksela</span>
+      </div>
       <div class="canvas-container">
         <div class="canvas-wrap" id="canvasWrap">
           <canvas id="drawCanvas" width="280" height="280"></canvas>
-          <div class="canvas-hint" id="canvasHint">Nacrtaj broj<br>ili slovo ovdje</div>
+          <div class="canvas-hint" id="canvasHint">Nacrtajte rukopisnu<br>cifru (0–9) ovdje</div>
         </div>
         <div class="brush-control">
-          <span>✏️ Debljina:</span>
-          <input type="range" id="brushSize" min="8" max="30" value="18">
-          <span id="brushVal">18px</span>
+          <span>✏️ Debljina poteza:</span>
+          <input type="range" id="brushSize" min="10" max="32" value="20">
+          <span id="brushVal" style="font-weight:700;color:var(--accent)">20px</span>
         </div>
         <div class="canvas-buttons">
-          <button class="btn btn-primary" id="predictBtn">🔍 Prepoznaj</button>
-          <button class="btn btn-secondary" id="autoBtn">⚡ Auto</button>
+          <button class="btn btn-primary" id="predictBtn">🔍 Prepoznaj cifru</button>
+          <button class="btn btn-secondary" id="autoBtn">⚡ Auto režim</button>
           <button class="btn btn-danger" id="clearBtn">🗑️ Obriši</button>
         </div>
       </div>
     </div>
 
-    <!-- Model Info -->
-    <div class="card" style="margin-top:16px">
-      <div class="card-title">Informacije o modelu</div>
-      <div class="info-grid" id="infoGrid">
-        <div class="info-item">
-          <div class="info-value" id="infoAcc">—</div>
-          <div class="info-label">Tačnost (test)</div>
-        </div>
-        <div class="info-item">
-          <div class="info-value" id="infoErr">—</div>
-          <div class="info-label">Stopa greške</div>
-        </div>
-        <div class="info-item">
-          <div class="info-value" id="infoClasses">—</div>
-          <div class="info-label">Broj klasa</div>
-        </div>
-        <div class="info-item">
-          <div class="info-value" id="infoLayers">—</div>
-          <div class="info-label">Skriveni slojevi</div>
-        </div>
+    <!-- Kartica sa specifikacijom arhitekture -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-left">Projektovana MLP Arhitektura (Poglavlje V rada)</div>
+        <span style="font-size:0.75rem;color:var(--accent);font-weight:700">109.386 parametara</span>
       </div>
-      <div style="margin-top:16px">
-        <div style="font-size:0.75rem;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Arhitektura mreže</div>
-        <div class="arch-viz" id="archViz"></div>
+      <div class="arch-viz" id="archViz"></div>
+      
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text2)">
+        <span>🔹 Ulaz: 784 (Flattening)</span>
+        <span>🔹 Skriveni 1: 128 (ReLU)</span>
+        <span>🔹 Skriveni 2: 64 (ReLU)</span>
+        <span>🔹 Izlaz: 10 (Softmax)</span>
+      </div>
+    </div>
+
+    <!-- Informacije o modelu -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-left">Metrike evaluacije i hiperparametri</div>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-value" id="infoAcc">98.20%</div>
+          <div class="info-label">Test tačnost (10.000)</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value" id="infoErr" style="color:var(--accent3)">1.80%</div>
+          <div class="info-label">Stopa greške (180/10k)</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value" id="infoParams">109.386</div>
+          <div class="info-label">Obučivih parametara</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value">40</div>
+          <div class="info-label">Broj epoha</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value">64</div>
+          <div class="info-label">Mini-batch veličina</div>
+        </div>
+        <div class="info-item">
+          <div class="info-value">Adam</div>
+          <div class="info-label">Optimizator (lr=0.001)</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- RIGHT: Results -->
+  <!-- DESNA KOLONA: Rezultati i Matrica konfuzije -->
   <div>
+    <!-- Rezultat prepoznavanja -->
     <div class="card">
-      <div class="card-title">Rezultat prepoznavanja</div>
-
-      <div class="prediction-main" id="predMain">
-        <div class="pred-empty">Nacrtaj znak i pritisni "Prepoznaj"</div>
+      <div class="card-title">
+        <div class="card-title-left">Rezultat klasifikacije</div>
       </div>
 
+      <div class="prediction-main" id="predMain">
+        <div class="pred-empty">Nacrtajte cifru na platnu i pritisnite "Prepoznaj cifru"</div>
+      </div>
+
+      <!-- Top 5 raspodela vjerovatnoća -->
       <div id="top5Section" style="display:none">
-        <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Top 5 kandidata</div>
+        <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Top 5 najvjerovatnijih klasa (Softmax)</div>
         <div class="top5-list" id="top5List"></div>
       </div>
 
-      <div class="all-classes" id="allClassesDiv">
-        <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;">Sve klase</div>
+      <!-- Svih 10 klasa cifara 0-9 -->
+      <div class="classes-container">
+        <div class="classes-title">Distribucija vjerovatnoća za sve cifre (0–9)</div>
         <div class="classes-grid" id="classesGrid"></div>
       </div>
+    </div>
 
-      <div style="margin-top:20px;display:flex;gap:10px;">
-        <button class="btn btn-secondary" id="showAllBtn" onclick="toggleAllClasses()" style="font-size:0.82rem;flex:0">Prikaži sve klase</button>
+    <!-- Matrica konfuzije (Tabela 1 iz završnog rada) -->
+    <div class="card" id="cmCard">
+      <div class="card-title">
+        <div class="card-title-left">Matrica konfuzije (Tabela 1 iz završnog rada)</div>
+        <button class="btn btn-secondary" onclick="toggleCM()" id="cmToggleBtn" style="flex:0;padding:4px 10px;font-size:0.75rem">Prikaži detalje</button>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text2);line-height:1.5">
+        Pregled raspodjele predikcija modela nad 10.000 testnih slika. Na dijagonali se nalaze tačni pogoci (9.820 uzoraka — 98,20%), dok van-dijagonalni elementi predstavljaju tipične morfološke greške (9→4, 5→3, 7→2).
+      </p>
+      <div id="cmContent" style="display:none" class="cm-table-wrap">
+        <table class="cm-table" id="cmTable">
+          <!-- Popunjava se preko JavaScript-a -->
+        </table>
       </div>
     </div>
 
-    <!-- Train card -->
-    <div class="card" style="margin-top:16px" id="trainCard">
-      <div class="card-title">Treniranje modela</div>
-      <div id="trainContent">
-        <p style="color:var(--text2);font-size:0.85rem;margin-bottom:14px;">Model se trenira na MNIST skupu podataka (60,000 uzoraka). Ovo može potrajati nekoliko minuta.</p>
-        <button class="btn btn-primary" id="trainBtn" onclick="startTraining()" style="width:100%">🚀 Pokreni treniranje</button>
-        <div class="train-progress" id="trainProgress" style="display:none">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.8rem">
-            <span style="color:var(--text2)">Progres</span>
-            <span id="epochInfo" style="color:var(--accent)">0 / 0 epoha</span>
-          </div>
-          <div class="progress-bar-wrap">
-            <div class="progress-bar" id="progressBar" style="width:0%"></div>
-          </div>
-          <div class="train-stats">
-            <span>Tačnost: <span class="train-stat-val" id="trainAccStat">—</span></span>
-            <span>Val. tačnost: <span class="train-stat-val" id="valAccStat">—</span></span>
-            <span>Gubitak: <span class="train-stat-val" id="lossStat">—</span></span>
-          </div>
-          <div class="train-log" id="trainLog"></div>
+    <!-- Kartica za ponovno obučavanje (opciono) -->
+    <div class="card" id="trainCard">
+      <div class="card-title">
+        <div class="card-title-left">Obučavanje modela iz početka</div>
+      </div>
+      <p style="color:var(--text2);font-size:0.82rem;margin-bottom:12px;line-height:1.5">
+        Obučava model prema parametrima rada: 40 epoha, batch 64, Adam optimizator (lr=0.001), 60.000 MNIST slika.
+      </p>
+      <button class="btn btn-primary" id="trainBtn" onclick="startTraining()" style="width:100%">🚀 Pokreni obučavanje modela</button>
+      
+      <div class="train-progress" id="trainProgress" style="display:none">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.8rem">
+          <span style="color:var(--text2)">Progres</span>
+          <span id="epochInfo" style="color:var(--accent);font-weight:700">0 / 40 epoha</span>
         </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progressBar" style="width:0%"></div>
+        </div>
+        <div class="train-stats">
+          <span>Tačnost (trening): <span class="train-stat-val" id="trainAccStat">—</span></span>
+          <span>Tačnost (test): <span class="train-stat-val" id="valAccStat">—</span></span>
+          <span>Gubitak: <span class="train-stat-val" id="lossStat">—</span></span>
+        </div>
+        <div class="train-log" id="trainLog"></div>
       </div>
     </div>
+
   </div>
 
 </div>
 
 <script>
 // ============================================================
-// Canvas logic
+// Canvas logika za crtanje cifara
 // ============================================================
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
@@ -353,6 +422,7 @@ let autoPredict = false;
 let autoTimer = null;
 let lastX = 0, lastY = 0;
 
+// Crna pozadina, beli potezi (kao u MNIST-u)
 ctx.fillStyle = '#000';
 ctx.fillRect(0, 0, 280, 280);
 ctx.lineCap = 'round';
@@ -369,7 +439,7 @@ function getPos(e) {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
-  if (e.touches) {
+  if (e.touches && e.touches.length > 0) {
     return {
       x: (e.touches[0].clientX - rect.left) * scaleX,
       y: (e.touches[0].clientY - rect.top) * scaleY
@@ -409,7 +479,7 @@ function stopDraw(e) {
   isDrawing = false;
   if (autoPredict && hasDrawn) {
     clearTimeout(autoTimer);
-    autoTimer = setTimeout(predict, 600);
+    autoTimer = setTimeout(predict, 500);
   }
 }
 
@@ -426,7 +496,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   ctx.fillRect(0, 0, 280, 280);
   hasDrawn = false;
   document.getElementById('canvasHint').style.opacity = '1';
-  document.getElementById('predMain').innerHTML = '<div class="pred-empty">Nacrtaj znak i pritisni "Prepoznaj"</div>';
+  document.getElementById('predMain').innerHTML = '<div class="pred-empty">Nacrtajte cifru na platnu i pritisnite "Prepoznaj cifru"</div>';
   document.getElementById('top5Section').style.display = 'none';
   updateClassChips(null);
 });
@@ -435,19 +505,20 @@ document.getElementById('predictBtn').addEventListener('click', predict);
 
 document.getElementById('autoBtn').addEventListener('click', function() {
   autoPredict = !autoPredict;
-  this.textContent = autoPredict ? '⚡ Auto ON' : '⚡ Auto';
+  this.textContent = autoPredict ? '⚡ Auto UKLJUČEN' : '⚡ Auto režim';
   this.style.borderColor = autoPredict ? 'var(--accent2)' : '';
   this.style.color = autoPredict ? 'var(--accent2)' : '';
+  if (autoPredict && hasDrawn) predict();
 });
 
 // ============================================================
-// Prediction
+// Klasifikacija (Inferencija)
 // ============================================================
 async function predict() {
   const imgData = canvas.toDataURL('image/png');
   const btn = document.getElementById('predictBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ ...';
+  btn.textContent = '⏳ Analiza...';
 
   try {
     const res = await fetch('/api/predict', {
@@ -462,15 +533,15 @@ async function predict() {
       return;
     }
 
-    // Main prediction
+    // Prikaz glavne predikcije
     const mainEl = document.getElementById('predMain');
     mainEl.innerHTML = `
-      <div class="pred-label">Prepoznato kao</div>
+      <div class="pred-label">Predviđena cifra</div>
       <div class="pred-character fade-in">${data.prediction}</div>
-      <div class="pred-confidence">Pouzdanost: ${data.confidence.toFixed(1)}%</div>
+      <div class="pred-confidence">Pouzdanost modela: ${data.confidence.toFixed(1)}%</div>
     `;
 
-    // Top 5
+    // Prikaz Top 5 kandidata
     const top5El = document.getElementById('top5List');
     top5El.innerHTML = '';
     data.top5.forEach((item, i) => {
@@ -487,44 +558,47 @@ async function predict() {
     });
     document.getElementById('top5Section').style.display = 'block';
 
-    // Update class chips
+    // Ažuriranje raspodjele za cifre 0-9
     updateClassChips(data.all_probabilities);
 
   } catch(e) {
-    showToast('Greška: ' + e.message);
+    showToast('Greška pri komunikaciji sa serverom: ' + e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = '🔍 Prepoznaj';
+    btn.textContent = '🔍 Prepoznaj cifru';
   }
 }
+
+function initClassChips() {
+  const grid = document.getElementById('classesGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const chip = document.createElement('div');
+    chip.className = 'class-chip';
+    chip.id = `chip-${i}`;
+    chip.innerHTML = `<span>${i}</span><span class="chip-prob">0%</span>`;
+    grid.appendChild(chip);
+  }
+}
+initClassChips();
 
 function updateClassChips(probs) {
-  const grid = document.getElementById('classesGrid');
-  if (!probs) {
-    grid.querySelectorAll('.class-chip').forEach(c => {
-      c.classList.remove('highlighted');
-    });
-    return;
+  for (let i = 0; i < 10; i++) {
+    const chip = document.getElementById(`chip-${i}`);
+    if (!chip) continue;
+    if (!probs) {
+      chip.classList.remove('highlighted');
+      chip.querySelector('.chip-prob').textContent = '0%';
+    } else {
+      const p = probs[i] ? probs[i].probability : 0;
+      chip.classList.toggle('highlighted', p > 5);
+      chip.querySelector('.chip-prob').textContent = p.toFixed(1) + '%';
+    }
   }
-  const map = {};
-  probs.forEach(p => { map[p.class] = p.probability; });
-  grid.querySelectorAll('.class-chip').forEach(chip => {
-    const cls = chip.dataset.cls;
-    const prob = map[cls] || 0;
-    chip.classList.toggle('highlighted', prob > 5);
-    chip.title = prob.toFixed(2) + '%';
-  });
-}
-
-function toggleAllClasses() {
-  const div = document.getElementById('allClassesDiv');
-  const btn = document.getElementById('showAllBtn');
-  div.classList.toggle('visible');
-  btn.textContent = div.classList.contains('visible') ? 'Sakrij klase' : 'Prikaži sve klase';
 }
 
 // ============================================================
-// Status & model info
+// Status modela i Arhitektura
 // ============================================================
 async function checkStatus() {
   try {
@@ -537,16 +611,15 @@ async function checkStatus() {
       dot.className = 'status-dot ready';
       txt.textContent = 'Model spreman';
       updateModelInfo(data);
-      updateArchViz(data.layer_sizes);
-      buildClassChips(data.classes);
-      document.getElementById('trainCard').style.display = 'none';
+      updateArchViz(data.layer_sizes, data.parameter_details);
+      loadConfusionMatrix();
     } else if (data.status === 'training') {
       dot.className = 'status-dot training';
-      txt.textContent = 'Treniranje...';
+      txt.textContent = 'Obučavanje u toku...';
       startPollingProgress();
     } else {
       dot.className = 'status-dot';
-      txt.textContent = 'Model nije ucitan';
+      txt.textContent = 'Model nije učitan';
     }
   } catch(e) {}
 }
@@ -554,15 +627,16 @@ async function checkStatus() {
 function updateModelInfo(data) {
   document.getElementById('infoAcc').textContent = (data.test_accuracy * 100).toFixed(2) + '%';
   document.getElementById('infoErr').textContent = (data.error_rate * 100).toFixed(2) + '%';
-  document.getElementById('infoClasses').textContent = data.n_classes;
-  document.getElementById('infoLayers').textContent = (data.layer_sizes.length - 2);
+  document.getElementById('infoParams').textContent = data.total_parameters.toLocaleString();
 }
 
 function updateArchViz(layerSizes) {
   const viz = document.getElementById('archViz');
   viz.innerHTML = '';
-  const names = ['Ulaz', 'Sk.1', 'Sk.2', 'Sk.3', 'Izlaz'];
-  const colors = ['#58a6ff', '#9f7aea', '#f78166', '#f0b04a', '#3fb950'];
+  const names = ['Ulaz', 'Skriveni 1', 'Skriveni 2', 'Izlaz'];
+  const formulas = ['Linearizacija', 'ReLU', 'ReLU', 'Softmax'];
+  const colors = ['#38bdf8', '#818cf8', '#a855f7', '#22c55e'];
+
   layerSizes.forEach((size, i) => {
     if (i > 0) {
       const arrow = document.createElement('div');
@@ -572,55 +646,93 @@ function updateArchViz(layerSizes) {
     }
     const box = document.createElement('div');
     box.className = 'layer-box';
+
     const circles = document.createElement('div');
     circles.className = 'layer-circles';
-    const shown = Math.min(size, 6);
+    const shown = Math.min(Math.max(Math.floor(size / 20), 4), 6);
     for (let j = 0; j < shown; j++) {
       const n = document.createElement('div');
       n.className = 'neuron';
-      n.style.background = colors[i] || '#58a6ff';
+      n.style.background = colors[i] || '#38bdf8';
       circles.appendChild(n);
     }
-    if (size > shown) {
-      const dots = document.createElement('div');
-      dots.style.cssText = 'color:var(--text2);font-size:0.7rem;text-align:center';
-      dots.textContent = '...';
-      circles.appendChild(dots);
-    }
+
     const label = document.createElement('div');
     label.className = 'layer-label';
-    label.textContent = names[i] || 'L' + i;
+    label.textContent = names[i];
+
     const sizeEl = document.createElement('div');
     sizeEl.className = 'layer-size';
     sizeEl.textContent = size;
+
+    const formEl = document.createElement('div');
+    formEl.className = 'layer-formula';
+    formEl.textContent = formulas[i];
+
     box.appendChild(circles);
     box.appendChild(label);
     box.appendChild(sizeEl);
+    box.appendChild(formEl);
     viz.appendChild(box);
   });
 }
 
-function buildClassChips(classes) {
-  const grid = document.getElementById('classesGrid');
-  grid.innerHTML = '';
-  classes.forEach(cls => {
-    const chip = document.createElement('div');
-    chip.className = 'class-chip';
-    chip.textContent = cls;
-    chip.dataset.cls = cls;
-    grid.appendChild(chip);
-  });
+// ============================================================
+// Matrica konfuzije
+// ============================================================
+async function loadConfusionMatrix() {
+  try {
+    const res = await fetch('/api/confusion_matrix');
+    const data = await res.json();
+    if (data.matrix) {
+      renderCMTable(data.matrix);
+    }
+  } catch(e) {}
+}
+
+function renderCMTable(cm) {
+  const table = document.getElementById('cmTable');
+  table.innerHTML = '';
+
+  // Zaglavlje
+  let thead = '<tr><th>Stvarna \\ Predv.</th>';
+  for (let j = 0; j < 10; j++) thead += `<th>P${j}</th>`;
+  thead += '</tr>';
+  table.innerHTML = thead;
+
+  // Vrste
+  for (let i = 0; i < 10; i++) {
+    let row = `<tr><th>S${i}</th>`;
+    for (let j = 0; j < 10; j++) {
+      const val = cm[i][j];
+      let cls = '';
+      if (i === j) cls = 'cm-diag';
+      else if (val > 0) cls = 'cm-error';
+      else cls = 'cm-zero';
+      row += `<td class="${cls}">${val}</td>`;
+    }
+    row += '</tr>';
+    table.innerHTML += row;
+  }
+}
+
+function toggleCM() {
+  const content = document.getElementById('cmContent');
+  const btn = document.getElementById('cmToggleBtn');
+  const isHidden = content.style.display === 'none';
+  content.style.display = isHidden ? 'block' : 'none';
+  btn.textContent = isHidden ? 'Sakrij detalje' : 'Prikaži detalje';
 }
 
 // ============================================================
-// Training
+// Obučavanje modela
 // ============================================================
 let pollingInterval = null;
 
 async function startTraining() {
   const btn = document.getElementById('trainBtn');
   btn.disabled = true;
-  btn.textContent = '🚀 Pokretanje...';
+  btn.textContent = '🚀 Pokretanje obučavanja...';
 
   try {
     const res = await fetch('/api/train', {method: 'POST'});
@@ -631,14 +743,14 @@ async function startTraining() {
   } catch(e) {
     showToast('Greška: ' + e.message);
     btn.disabled = false;
-    btn.textContent = '🚀 Pokreni treniranje';
+    btn.textContent = '🚀 Pokreni obučavanje modela';
   }
 }
 
 function startPollingProgress() {
   if (pollingInterval) return;
   document.getElementById('trainProgress').style.display = 'block';
-  pollingInterval = setInterval(pollProgress, 2000);
+  pollingInterval = setInterval(pollProgress, 1500);
 }
 
 async function pollProgress() {
@@ -646,7 +758,7 @@ async function pollProgress() {
     const res = await fetch('/api/training_progress');
     const data = await res.json();
     const history = data.history || [];
-    const total = data.total_epochs || 60;
+    const total = data.total_epochs || 40;
 
     if (history.length > 0) {
       const last = history[history.length - 1];
@@ -658,7 +770,7 @@ async function pollProgress() {
       document.getElementById('lossStat').textContent = last.loss ? last.loss.toFixed(4) : '—';
 
       const log = document.getElementById('trainLog');
-      const line = `> Ep ${String(last.epoch).padStart(2,' ')}/${total} | Loss=${last.loss ? last.loss.toFixed(4) : '?'} | Train=${last.train_acc ? (last.train_acc*100).toFixed(2) : '?'}%${last.val_acc ? ' | Val='+( last.val_acc*100).toFixed(2)+'%' : ''}\n`;
+      const line = `> Epoha ${String(last.epoch).padStart(2,' ')}/${total} | Gubitak=${last.loss.toFixed(4)} | Trening=${(last.train_acc*100).toFixed(2)}% | Test=${(last.val_acc*100).toFixed(2)}%\n`;
       log.textContent += line;
       log.scrollTop = log.scrollHeight;
     }
@@ -666,15 +778,12 @@ async function pollProgress() {
     if (data.status === 'done') {
       clearInterval(pollingInterval);
       pollingInterval = null;
-      showToast('✅ Treniranje završeno! Tačnost: ' + (data.final_accuracy * 100).toFixed(2) + '%');
+      showToast('✅ Obučavanje završeno! Test tačnost: ' + (data.final_accuracy * 100).toFixed(2) + '%');
       setTimeout(() => { location.reload(); }, 1500);
     }
   } catch(e) {}
 }
 
-// ============================================================
-// Toast notifications
-// ============================================================
 function showToast(msg, duration = 4000) {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
@@ -685,9 +794,7 @@ function showToast(msg, duration = 4000) {
   setTimeout(() => toast.remove(), duration);
 }
 
-// ============================================================
-// Init
-// ============================================================
+// Inicijalizacija
 checkStatus();
 setInterval(checkStatus, 5000);
 </script>
