@@ -1,9 +1,6 @@
 # 🧠 Višeslojni Perceptron (MLP) — Prepoznavanje rukopisnih cifara (MNIST)
 ### Praktično programsko rješenje uz završni (diplomski) rad
 **Tema rada:** Višeslojni perceptron neuronskih mreža u prepoznavanju slika  
-**Kandidat:** Vladan Kenjić (Broj indeksa: I-1765/25)  
-**Mentor:** Doc. dr Maid Omerović  
-**Institucija:** Univerzitet u Travniku, Fakultet za tehničke studije (FTS), Inženjerska informatika  
 **Verzija softvera:** `MLP_Demo_1.0` (Septembar 2026.)
 
 ---
