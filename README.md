@@ -6,9 +6,6 @@
 ---
 
 ## 📌 Pregled projekta
-
-Ovaj softverski paket predstavlja **kompletno, rigorozno i potpuno usklađeno praktično programsko rješenje** razvijeno uz novu, ažuriranu verziju završnog rada (`Završni rad.docx`).
-
 Sistem implementira model **višeslojnog perceptrona (Multilayer Perceptron — MLP)** potpuno **od nule (*from scratch*)**, oslanjajući se isključivo na linearnu algebru i matrične proračune u biblioteci **NumPy**. U projektu nisu korišćeni gotovi paketi visokog nivoa (poput TensorFlow-a, PyTorch-a ili Keras-a), već je svaka formula iz teorijskog i matematičkog dijela rada direktno pretočena u izvorni kod.
 
 ---
