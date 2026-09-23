@@ -23,7 +23,7 @@ Sistem implementira model **višeslojnog perceptrona (Multilayer Perceptron — 
 | **Izlazni sloj** | 10 neurona (Dense + Softmax) | $64 \times 10 + 10 = \mathbf{650}$ parametara |
 | **UKUPAN BROJ PARAMETARA** | **109.386 obučivih parametara** | **Tačno 109.386 parametara** (`count_parameters()`) |
 | **Inicijalizacija težina** | He (Kaiming) normalna raspodjela | $W \sim \mathcal{N}\left(0, \sqrt{2 / n_{in}}\right)$, $b = \mathbf{0}$ |
-| **Funkcija gubitka** | Kategorička unakrsna entropija | $\mathcal{L}_{CE}(y, \hat{y}) = -\sum_{k=1}^K y_k \log \hat{y}_k$ |
+| **Funkcija gubitka** | Kategorička unakrsna entropija | $$\mathcal{L}_{CE}(y, \hat{y}) = -\sum_{k=1}^K y_k \log \hat{y}_k$$ |
 | **Optimizator** | Adam (Adaptive Moment Estimation) | $\beta_1 = 0.9, \beta_2 = 0.999, \epsilon = 10^{-8}, \eta = 0.001$ |
 | **Veličina mini-paketa** | Mini-batch od 64 uzorka | `batch_size = 64` |
 | **Broj epoha obučavanja** | 40 epoha | `epochs = 40` |
@@ -40,7 +40,7 @@ Za svaki sloj $l \in \{1, 2, 3\}$:
 $z^{[l]} = a^{[l-1]} W^{[l]} + b^{[l]}$
 $a^{[l]} = \varphi^{[l]}(z^{[l]})$
 - Za skrivene slojeve ($l=1, 2$): $\varphi(z) = \text{ReLU}(z) = \max(0, z)$
-- Za izlazni sloj ($l=3$): $\varphi(z)_k = \text{Softmax}(z)_k = \frac{e^{z_k}}{\sum_{j=1}^{10} e^{z_j}}$
+- Za izlazni sloj ($l=3$): $$\varphi(z)_k = \text{Softmax}(z)_k = \frac{e^{z_k}}{\sum_{j=1}^{10} e^{z_j}}$$
 
 ### 2. Propagacija signala greške unazad (Backpropagation)
 - Signal greške na izlaznom sloju:
