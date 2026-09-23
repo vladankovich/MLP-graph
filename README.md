@@ -1,5 +1,5 @@
 # 🧠 Višeslojni Perceptron (MLP) — Prepoznavanje rukopisnih cifara (MNIST)
-### Praktično programsko rješenje uz završni (diplomski) rad
+### Praktično programsko rješenje uz završni rad
 **Tema rada:** Višeslojni perceptron neuronskih mreža u prepoznavanju slika  
 **Verzija softvera:** `MLP_Demo_1.0` (Septembar 2026.)
 
