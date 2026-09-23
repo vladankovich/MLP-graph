@@ -37,18 +37,18 @@ Sistem implementira model **višeslojnog perceptrona (Multilayer Perceptron — 
 
 ### 1. Unaprijedno prostiranje signala (Forward Pass)
 Za svaki sloj $l \in \{1, 2, 3\}$:
-$$z^{[l]} = a^{[l-1]} W^{[l]} + b^{[l]}$$
-$$a^{[l]} = \varphi^{[l]}(z^{[l]})$$
+$z^{[l]} = a^{[l-1]} W^{[l]} + b^{[l]}$
+$a^{[l]} = \varphi^{[l]}(z^{[l]})$
 - Za skrivene slojeve ($l=1, 2$): $\varphi(z) = \text{ReLU}(z) = \max(0, z)$
 - Za izlazni sloj ($l=3$): $\varphi(z)_k = \text{Softmax}(z)_k = \frac{e^{z_k}}{\sum_{j=1}^{10} e^{z_j}}$
 
 ### 2. Propagacija signala greške unazad (Backpropagation)
 - Signal greške na izlaznom sloju:
-$$\delta^{[L]} = \frac{1}{M} \left(a^{[L]} - y\right)$$
+$\delta^{[L]} = \frac{1}{M} \left(a^{[L]} - y\right)$
 - Gradijenti težina i pomjeraja:
-$$\frac{\partial \mathcal{L}}{\partial W^{[l]}} = \left(a^{[l-1]}\right)^T \delta^{[l]}, \qquad \frac{\partial \mathcal{L}}{\partial b^{[l]}} = \sum_{m=1}^M \delta_m^{[l]}$$
+$\frac{\partial \mathcal{L}}{\partial W^{[l]}} = \left(a^{[l-1]}\right)^T \delta^{[l]}, \qquad \frac{\partial \mathcal{L}}{\partial b^{[l]}} = \sum_{m=1}^M \delta_m^{[l]}$
 - Propagacija signala u prethodni sloj primjenom lančanog pravila diferenciranja:
-$$\delta^{[l-1]} = \left(\delta^{[l]} \left(W^{[l]}\right)^T\right) \odot \text{mask}^{[l-1]} \odot \text{ReLU}'\left(z^{[l-1]}\right)$$
+$\delta^{[l-1]} = \left(\delta^{[l]} \left(W^{[l]}\right)^T\right) \odot \text{mask}^{[l-1]} \odot \text{ReLU}'\left(z^{[l-1]}\right)$
 
 ---
 
